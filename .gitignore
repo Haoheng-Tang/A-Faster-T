@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+*.local
+.venv
+.venv-backend/
+backend/__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+/.pnp
+/.pnp.js
