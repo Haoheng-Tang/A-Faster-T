@@ -108,7 +108,7 @@ export default function ControlPanel({
             loadData()
           }}
         >
-          <option value="mock">Mock</option>
+          
           <option value="openStreetMap">OpenStreetMap</option>
           <option value="unrealVM">Unreal VM</option>
         </select>

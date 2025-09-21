@@ -5,6 +5,7 @@ import MapArea from './components/MapArea'
 import { fetchFromAdapter } from './services/dataAdapters'
 import screenshot from './resources/Screenshot 2025-09-20 160708.png'
 import subway from './resources/SubwayMapExample.png'
+import DiagramsWindow from './components/diagrams/DiagramsWindow'
 
 
 export default function App(): JSX.Element {
@@ -13,7 +14,7 @@ export default function App(): JSX.Element {
   const [liveMode, setLiveMode] = useState<boolean>(false)
   const [data, setData] = useState<any[]>([])
 
-  const [adapter, setAdapter] = useState<string>('mock')
+  const [adapter, setAdapter] = useState<string>('openStreetMap')
   const [adapterUrl, setAdapterUrl] = useState<string>('')
   const [showControls, setShowControls] = useState<boolean>(true)
 
@@ -24,7 +25,6 @@ export default function App(): JSX.Element {
 
   // map adapter key to a resource image
   const adapterImageMap: Record<string, string | undefined> = {
-    mock: undefined,
     openStreetMap: screenshot,
     unrealVM: subway,
   }
@@ -60,6 +60,16 @@ export default function App(): JSX.Element {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // When switching sections, automatically hide controls in diagrams (section 1)
+  useEffect(() => {
+    if (section === 1) {
+      setShowControls(false)
+    } else {
+      // show controls again when returning to map section
+      setShowControls(true)
+    }
+  }, [section])
+
   return (
     <div className="p-0">
       <div className="vh-section" id="map-section">
@@ -80,28 +90,21 @@ export default function App(): JSX.Element {
             onClose={() => setShowControls(false)}
           />
         )}
-        <Navbar title="Faster T" variant="transparent" onToggleControls={() => setShowControls((s) => !s)} />
-        <MapArea data={data} showBus={showBus} showTrain={showTrain} backgroundImage={backgroundImage} />
+  <Navbar title="Faster T" variant="transparent" onToggleControls={() => setShowControls((s) => !s)} whiteBrand={section === 0} />
+  <MapArea data={data} showBus={showBus} showTrain={showTrain} backgroundImage={backgroundImage} adapter={adapter} />
         {section === 0 && (
           <button className="scroll-down-btn" aria-label="Scroll down" onClick={scrollDown}>▾</button>
         )}
       </div>
 
       <div className="vh-section charts-section" id="charts-section">
-        <div style={{ width: '90%', maxWidth: 1200 }}>
-          <h3>System Status</h3>
-          <p>Placeholder for diagrams and graphs. Paste your HTML here later.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={{ background: '#fff', padding: 16, borderRadius: 8, minHeight: 220 }}>Chart placeholder 1</div>
-            <div style={{ background: '#fff', padding: 16, borderRadius: 8, minHeight: 220 }}>Chart placeholder 2</div>
-            <div style={{ background: '#fff', padding: 16, borderRadius: 8, minHeight: 220 }}>Chart placeholder 3</div>
-            <div style={{ background: '#fff', padding: 16, borderRadius: 8, minHeight: 220 }}>Chart placeholder 4</div>
-          </div>
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <DiagramsWindow />
         </div>
         {section === 1 && (
           <button className="scroll-down-btn" aria-label="Scroll up" onClick={scrollUp}>▴</button>
         )}
-      </div>
+  </div>
     </div>
   )
 }
