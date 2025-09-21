@@ -110,7 +110,7 @@ export default function App(): JSX.Element {
             onClose={() => setShowControls(false)}
           />
         )}
-  <Navbar title="Faster T" variant="transparent" onToggleControls={() => setShowControls((s) => !s)} whiteBrand={section === 0} />
+  <Navbar title="CityPulse" variant="transparent" onToggleControls={() => setShowControls((s) => !s)} whiteBrand={section === 0} />
   <MapArea
     data={data}
     showBus={showBus}

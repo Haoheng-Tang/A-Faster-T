@@ -29,6 +29,9 @@ export default function ControlPanel({
   setAdapterUrl,
   onClose,
 }: Props): JSX.Element {
+  // Date and hour state
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedHour, setSelectedHour] = useState<string>('12:00');
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState({ x: 16, y: 80 })
   const dragging = useRef(false)
@@ -98,6 +101,27 @@ export default function ControlPanel({
       
 
       <div className="mb-2">
+        <label className="form-label">Date</label>
+        <input
+          type="date"
+          className="form-control"
+          value={selectedDate}
+          onChange={e => setSelectedDate(e.target.value)}
+        />
+      </div>
+
+      <div className="mb-2">
+        <label className="form-label">Hour</label>
+        <input
+          type="time"
+          className="form-control"
+          value={selectedHour}
+          onChange={e => setSelectedHour(e.target.value)}
+          step="300"
+        />
+      </div>
+
+      <div className="mb-2">
         <label className="form-label">Data Adapter</label>
         <select
           className="form-select"
@@ -110,21 +134,8 @@ export default function ControlPanel({
         >
           
           <option value="openStreetMap">OpenStreetMap</option>
-          <option value="unrealVM">Unreal VM</option>
+          <option value="unrealVM">Unreal Engine</option>
         </select>
-      </div>
-
-      <div className="form-check form-switch mt-2">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="switchLive"
-          checked={liveMode}
-          onChange={(e) => setLiveMode(e.target.checked)}
-        />
-        <label className="form-check-label" htmlFor="switchLive">
-          Live Mode
-        </label>
       </div>
 
       <div className="mt-3 d-grid">
