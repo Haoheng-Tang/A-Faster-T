@@ -315,19 +315,19 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
                 // Helper: interpolate color from green (14) to yellow (21) to red (28)
                 function getNodeFillColor(val: number) {
                   if (val <= 14) return '#22c55e'; // green
-                  if (val >= 28) return '#ef4444'; // red
-                  if (val <= 21) {
-                    // green to yellow
+                  if (val >= 100) return '#ef4444'; // red
+                  if (val <= 57) {
+                    // green to yellow (14 to 57)
                     // green: hsl(142, 70%, 49%) -> yellow: hsl(50, 100%, 50%)
-                    const t = (val - 14) / (21 - 14);
+                    const t = (val - 14) / (57 - 14);
                     const h = 142 + (50 - 142) * t;
                     const s = 70 + (100 - 70) * t;
                     const l = 49 + (50 - 49) * t;
                     return `hsl(${h},${s}%,${l}%)`;
                   } else {
-                    // yellow to red
+                    // yellow to red (57 to 100)
                     // yellow: hsl(50, 100%, 50%) -> red: hsl(0, 84%, 60%)
-                    const t = (val - 21) / (28 - 21);
+                    const t = (val - 57) / (100 - 57);
                     const h = 50 + (0 - 50) * t;
                     const s = 100 + (84 - 100) * t;
                     const l = 50 + (60 - 50) * t;
