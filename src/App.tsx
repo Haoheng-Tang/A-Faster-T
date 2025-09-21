@@ -57,6 +57,13 @@ export default function App(): JSX.Element {
       });
   }, []);
 
+  // Hide bubbles by clearing nodeEstimates when deselecting all
+  useEffect(() => {
+    if (!selectedLine && (!selectedNodeIds || selectedNodeIds.length === 0) && !selectedStopId) {
+      setNodeEstimates({});
+    }
+  }, [selectedLine, selectedNodeIds, selectedStopId]);
+
   const estimateTraffic = async () => {
     // Use selectedNodeIds if any, else fallback to selectedStopId
     const nodeKeys = selectedNodeIds && selectedNodeIds.length > 0 ? selectedNodeIds : (selectedStopId ? [selectedStopId] : []);

@@ -100,8 +100,8 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
   const geoJsonStopsRef = useRef<L.GeoJSON | null>(null)
   // Ref to keep track of ring markers so we can remove them
   const ringMarkersRef = useRef<L.Marker[]>([])
-  // Ref for the value label marker
-  const valueLabelMarkerRef = useRef<L.Marker | null>(null)
+  // Ref for all value label markers (bubbles)
+  const valueLabelMarkersRef = useRef<L.Marker[]>([])
 
   useEffect(() => {
     // Remove any existing ring markers before updating
@@ -109,10 +109,10 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
       ringMarkersRef.current.forEach((rm) => rm.remove());
       ringMarkersRef.current = [];
     }
-    // Remove value label marker if present
-    if (valueLabelMarkerRef.current && leafletMapRef.current) {
-      valueLabelMarkerRef.current.remove();
-      valueLabelMarkerRef.current = null;
+    // Remove all value label markers if present
+    if (valueLabelMarkersRef.current.length > 0 && leafletMapRef.current) {
+      valueLabelMarkersRef.current.forEach((m) => m.remove());
+      valueLabelMarkersRef.current = [];
     }
     // Reset fit bounds tracker when adapter changes
     hasFitBoundsRef.current = false;
@@ -397,10 +397,7 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
                     ringMarkersRef.current = [];
                   }
                   // Remove previous value label marker (only for single node)
-                  if (grownNodeId === stopId && valueLabelMarkerRef.current && leafletMapRef.current) {
-                    valueLabelMarkerRef.current.remove();
-                    valueLabelMarkerRef.current = null;
-                  }
+                  // No need to remove a single value label marker, all are managed in valueLabelMarkersRef
                   const ringColor = getNodeFillColor(nodeValue);
                   const ringDiv = L.divIcon({
                     className: '',
@@ -482,10 +479,7 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
                       };
                       updateLabelPosition();
                       labelMarker.addTo(map);
-                      // Don't use valueLabelMarkerRef for multi-node, only for single node
-                      if (grownNodeId === stopId) {
-                        valueLabelMarkerRef.current = labelMarker;
-                      }
+                      valueLabelMarkersRef.current.push(labelMarker);
                       // Listen for map move/zoom to keep label above node
                       map.on('zoom move', updateLabelPosition);
                       // Clean up event listeners if marker is removed
@@ -526,9 +520,9 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
         ringMarkersRef.current.forEach((rm) => rm.remove());
         ringMarkersRef.current = [];
       }
-      if (valueLabelMarkerRef.current && leafletMapRef.current) {
-        valueLabelMarkerRef.current.remove();
-        valueLabelMarkerRef.current = null;
+      if (valueLabelMarkersRef.current.length > 0 && leafletMapRef.current) {
+        valueLabelMarkersRef.current.forEach((m) => m.remove());
+        valueLabelMarkersRef.current = [];
       }
     };
   }, [adapter, selectedStopId, grownNodeId, grownNodeSize, selectedLine])
