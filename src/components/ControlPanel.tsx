@@ -7,7 +7,7 @@ interface Props {
   setShowTrain: (v: boolean) => void
   liveMode: boolean
   setLiveMode: (v: boolean) => void
-  loadData: () => void
+  estimateTraffic: () => void
   adapter: string
   setAdapter: (a: string) => void
   adapterUrl?: string
@@ -22,7 +22,7 @@ export default function ControlPanel({
   setShowTrain,
   liveMode,
   setLiveMode,
-  loadData,
+  estimateTraffic,
   adapter,
   setAdapter,
   adapterUrl,
@@ -105,49 +105,13 @@ export default function ControlPanel({
           onChange={(e) => {
             setAdapter(e.target.value)
             // attempt to load data immediately when adapter changes
-            loadData()
+            estimateTraffic()
           }}
         >
           
           <option value="openStreetMap">OpenStreetMap</option>
           <option value="unrealVM">Unreal VM</option>
         </select>
-      </div>
-
-      <div className="mb-2">
-        <label className="form-label">Adapter URL (optional)</label>
-        <input
-          className="form-control"
-          value={adapterUrl ?? ''}
-          onChange={(e) => setAdapterUrl && setAdapterUrl(e.target.value)}
-          placeholder="http://..."
-        />
-      </div>
-
-      <div className="form-check">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="chkBus"
-          checked={showBus}
-          onChange={(e) => setShowBus(e.target.checked)}
-        />
-        <label className="form-check-label" htmlFor="chkBus">
-          Show Buses
-        </label>
-      </div>
-
-      <div className="form-check">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="chkTrain"
-          checked={showTrain}
-          onChange={(e) => setShowTrain(e.target.checked)}
-        />
-        <label className="form-check-label" htmlFor="chkTrain">
-          Show Trains
-        </label>
       </div>
 
       <div className="form-check form-switch mt-2">
@@ -164,10 +128,10 @@ export default function ControlPanel({
       </div>
 
       <div className="mt-3 d-grid">
-        <button className="btn btn-primary" onClick={loadData}>
-          Load Data
+        <button className="btn btn-primary" onClick={estimateTraffic}>
+          Estimate
         </button>
-        <button className="btn btn-outline-secondary mt-2">Reset View</button>
+        
       </div>
     </div>
   )

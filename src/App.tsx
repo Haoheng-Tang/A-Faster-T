@@ -18,9 +18,29 @@ export default function App(): JSX.Element {
   const [adapterUrl, setAdapterUrl] = useState<string>('')
   const [showControls, setShowControls] = useState<boolean>(true)
 
-  const loadData = async () => {
+  // New: random node size for selected node (by id)
+  const [grownNodeId, setGrownNodeId] = useState<string | null>(null);
+  const [grownNodeSize, setGrownNodeSize] = useState<number>(14);
+
+  // Helper to generate random int in [min, max]
+  function getRandomInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  // selectedStopId is tracked in MapArea, so we need to lift it up
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+
+  const estimateTraffic = async () => {
     const d = await fetchFromAdapter(adapter, { url: adapterUrl, live: liveMode })
     setData(d)
+    // Only grow the node that is currently selected
+    if (selectedStopId) {
+      setGrownNodeId(selectedStopId);
+      setGrownNodeSize(getRandomInt(14, 28));
+    } else {
+      setGrownNodeId(null);
+      setGrownNodeSize(14);
+    }
   }
 
   // map adapter key to a resource image
@@ -82,7 +102,7 @@ export default function App(): JSX.Element {
             setShowTrain={setShowTrain}
             liveMode={liveMode}
             setLiveMode={setLiveMode}
-            loadData={loadData}
+            estimateTraffic={estimateTraffic}
             adapter={adapter}
             setAdapter={setAdapter}
             adapterUrl={adapterUrl}
@@ -91,7 +111,17 @@ export default function App(): JSX.Element {
           />
         )}
   <Navbar title="Faster T" variant="transparent" onToggleControls={() => setShowControls((s) => !s)} whiteBrand={section === 0} />
-  <MapArea data={data} showBus={showBus} showTrain={showTrain} backgroundImage={backgroundImage} adapter={adapter} />
+  <MapArea
+    data={data}
+    showBus={showBus}
+    showTrain={showTrain}
+    backgroundImage={backgroundImage}
+    adapter={adapter}
+    selectedStopId={selectedStopId}
+    setSelectedStopId={setSelectedStopId}
+    grownNodeId={grownNodeId}
+    grownNodeSize={grownNodeSize}
+  />
         {section === 0 && (
           <button className="scroll-down-btn" aria-label="Scroll down" onClick={scrollDown}>▾</button>
         )}

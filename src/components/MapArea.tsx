@@ -3,6 +3,44 @@ import React, { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+// Add CSS for multi-color, multi-ring pulsating effect
+const ringStyle = `
+.leaflet-pulse-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  margin-left: -30px;
+  margin-top: -30px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 3px solid var(--pulse-color, #fff);
+  opacity: 0.7;
+}
+.leaflet-pulse-ring.ring1 {
+  animation: leaflet-pulse 1.5s cubic-bezier(0.66,0,0,1) 0s infinite;
+}
+.leaflet-pulse-ring.ring2 {
+  animation: leaflet-pulse 1.5s cubic-bezier(0.66,0,0,1) 0.1s infinite;
+}
+.leaflet-pulse-ring.ring3 {
+  animation: leaflet-pulse 1.5s cubic-bezier(0.66,0,0,1) 0.2s infinite;
+}
+@keyframes leaflet-pulse {
+  0% { transform: scale(0.7); opacity: 0.7; }
+  70% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(0.7); opacity: 0; }
+}
+`;
+if (typeof window !== 'undefined' && !document.getElementById('leaflet-pulse-style')) {
+  const style = document.createElement('style');
+  style.id = 'leaflet-pulse-style';
+  style.innerHTML = ringStyle;
+  document.head.appendChild(style);
+}
+
 export interface Item {
   id: string
   type: 'bus' | 'train' | 'other'
@@ -17,9 +55,13 @@ interface Props {
   showTrain: boolean
   backgroundImage?: string
   adapter?: string
+  selectedStopId?: string | null
+  setSelectedStopId?: (id: string | null) => void
+  grownNodeId?: string | null
+  grownNodeSize?: number
 }
 
-export default function MapArea({ data, showBus, showTrain, backgroundImage, adapter }: Props): JSX.Element {
+export default function MapArea({ data, showBus, showTrain, backgroundImage, adapter, selectedStopId, setSelectedStopId, grownNodeId, grownNodeSize }: Props): JSX.Element {
   // Track if we've already fit bounds for this map session
   const hasFitBoundsRef = useRef(false);
   const filtered = data.filter((d) => {
@@ -33,10 +75,15 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
   // Refs for geojson layers so we can remove them before adding new
   const geoJsonLineRef = useRef<L.GeoJSON | null>(null)
   const geoJsonStopsRef = useRef<L.GeoJSON | null>(null)
-  // Track selected stop by id (station + line); only one selected at a time
-  const [selectedStop, setSelectedStop] = useState<string | null>(null)
+  // Ref to keep track of ring markers so we can remove them
+  const ringMarkersRef = useRef<L.Marker[]>([])
 
   useEffect(() => {
+    // Remove any existing ring markers before updating
+    if (ringMarkersRef.current.length > 0 && leafletMapRef.current) {
+      ringMarkersRef.current.forEach((rm) => rm.remove());
+      ringMarkersRef.current = [];
+    }
     // Reset fit bounds tracker when adapter changes
     hasFitBoundsRef.current = false;
     if (!mapRef.current) return;
@@ -147,12 +194,41 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
             geoJsonStopsRef.current = L.geoJSON(geojsonStops, {
               pointToLayer: (feature, latlng) => {
                 const stopId = `${feature.properties?.STATION || ''}_${feature.properties?.LINE || ''}`;
-                const isSelected = selectedStop === stopId;
+                const isSelected = selectedStopId === stopId;
+                // Helper: interpolate color from green (14) to yellow (21) to red (28)
+                function getNodeFillColor(val: number) {
+                  if (val <= 14) return '#22c55e'; // green
+                  if (val >= 28) return '#ef4444'; // red
+                  if (val <= 21) {
+                    // green to yellow
+                    // green: hsl(142, 70%, 49%) -> yellow: hsl(50, 100%, 50%)
+                    const t = (val - 14) / (21 - 14);
+                    const h = 142 + (50 - 142) * t;
+                    const s = 70 + (100 - 70) * t;
+                    const l = 49 + (50 - 49) * t;
+                    return `hsl(${h},${s}%,${l}%)`;
+                  } else {
+                    // yellow to red
+                    // yellow: hsl(50, 100%, 50%) -> red: hsl(0, 84%, 60%)
+                    const t = (val - 21) / (28 - 21);
+                    const h = 50 + (0 - 50) * t;
+                    const s = 100 + (84 - 100) * t;
+                    const l = 50 + (60 - 50) * t;
+                    return `hsl(${h},${s}%,${l}%)`;
+                  }
+                }
+
+                let fillColor = '#000';
+                // Only the grown node gets the color fill; all others (even selected) stay black
+                if (isSelected && grownNodeId === stopId && grownNodeSize) {
+                  fillColor = getNodeFillColor(grownNodeSize);
+                }
+
                 const baseStyle = {
-                  radius: isSelected ? 14 : 7, // much larger if selected
-                  color: '#fff', // blue or white outline
-                  weight: isSelected ? 4 : 2, // thicker outline if selected
-                  fillColor: '#000', // white fill if selected, black otherwise
+                  radius: isSelected ? (grownNodeId === stopId ? (grownNodeSize || 14) : 14) : 7,
+                  color: '#fff',
+                  weight: isSelected ? 4 : 2,
+                  fillColor,
                   fillOpacity: 1
                 };
                 const marker = L.circleMarker(latlng, baseStyle)
@@ -161,20 +237,12 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
                   );
                 marker.on('click', (e) => {
                   e.originalEvent?.stopPropagation?.(); // prevent map click from firing
-                  setSelectedStop(stopId);
-                  // Animate: pulse effect (optional, can be removed if not needed)
-                  let grow = true;
-                  let count = 0;
-                  const pulse = setInterval(() => {
-                    if (grow) {
-                      marker.setStyle({ radius: 22 });
-                    } else {
-                      marker.setStyle({ radius: 18 });
-                    }
-                    grow = !grow;
-                    count++;
-                    if (count > 3) clearInterval(pulse);
-                  }, 100);
+                  // Remove all ring markers when selecting a new node
+                  if (ringMarkersRef.current.length > 0 && leafletMapRef.current) {
+                    ringMarkersRef.current.forEach((rm) => rm.remove());
+                    ringMarkersRef.current = [];
+                  }
+                  if (setSelectedStopId) setSelectedStopId(stopId);
                 });
                 let popupTimer: any = null;
                 marker.on('mouseover', function () {
@@ -189,6 +257,35 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
                   }
                   marker.closePopup();
                 });
+
+                // Add three pulsating rings for grown node, color matches fill
+                // Only add rings if this node is both selected and grown
+                if (isSelected && grownNodeId === stopId && grownNodeSize) {
+                  // Remove all previous rings before adding new ones
+                  if (ringMarkersRef.current.length > 0 && leafletMapRef.current) {
+                    ringMarkersRef.current.forEach((rm) => rm.remove());
+                    ringMarkersRef.current = [];
+                  }
+                  const ringColor = getNodeFillColor(grownNodeSize);
+                  const ringDiv = L.divIcon({
+                    className: '',
+                    html: `
+                      <div class="leaflet-pulse-ring ring1" style="--pulse-color: ${ringColor}"></div>
+                      <div class="leaflet-pulse-ring ring2" style="--pulse-color: ${ringColor}"></div>
+                      <div class="leaflet-pulse-ring ring3" style="--pulse-color: ${ringColor}"></div>
+                    `,
+                    iconSize: [60, 60],
+                    iconAnchor: [30, 30],
+                  });
+                  const ringMarker = L.marker(latlng, { icon: ringDiv, interactive: false });
+                  setTimeout(() => {
+                    if (map && ringMarker) {
+                      ringMarker.addTo(map);
+                      ringMarkersRef.current.push(ringMarker);
+                    }
+                  }, 0);
+                }
+
                 return marker;
               }
             }).addTo(map);
@@ -200,10 +297,24 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
 
             // Deselect on map click (anywhere else)
             map.off('click');
-            map.on('click', () => setSelectedStop(null));
+            map.on('click', () => {
+              // Remove all ring markers immediately on deselect
+              if (ringMarkersRef.current.length > 0 && leafletMapRef.current) {
+                ringMarkersRef.current.forEach((rm) => rm.remove());
+                ringMarkersRef.current = [];
+              }
+              setSelectedStopId && setSelectedStopId(null);
+            });
           });
       });
-  }, [adapter, selectedStop])
+    // Cleanup: remove all ring markers on unmount or dependency change
+    return () => {
+      if (ringMarkersRef.current.length > 0 && leafletMapRef.current) {
+        ringMarkersRef.current.forEach((rm) => rm.remove());
+        ringMarkersRef.current = [];
+      }
+    };
+  }, [adapter, selectedStopId, grownNodeId, grownNodeSize])
 
   return (
     <div className="map-fullscreen">
