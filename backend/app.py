@@ -11,7 +11,7 @@ def estimate():
     data = request.get_json()
     print("Received estimate request:", data)  # <-- Add this line
     # You can use data['nodeId'], data['lat'], data['lon'], data['date'], data['time'] if needed
-    value = random.randint(14, 28)
+    value = random.randint(0, 110)
     return jsonify({'value': value})
 
 @app.route('/api/ping')

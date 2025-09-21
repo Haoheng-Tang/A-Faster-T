@@ -343,7 +343,9 @@ export default function MapArea({ data, showBus, showTrain, backgroundImage, ada
                 if (nodeEstimates && nodeEstimates[stopId] !== undefined && isSelected) {
                   nodeValue = nodeEstimates[stopId];
                   fillColor = getNodeFillColor(nodeValue);
-                  nodeRadius = 14 + ((nodeValue - 14) / (28 - 14)) * 14; // 14-28 maps to radius 14-28
+                  // Clamp value to 100 for radius calculation, but show real value in bubble
+                  const clampedValue = Math.min(nodeValue, 100);
+                  nodeRadius = 14 + ((clampedValue / 100) * (28 - 14)); // 0-100 maps to 14-28
                   showRings = true;
                 } else if (isSelected && grownNodeId === stopId && grownNodeSize) {
                   fillColor = getNodeFillColor(grownNodeSize);

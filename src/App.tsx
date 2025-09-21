@@ -105,10 +105,12 @@ export default function App(): JSX.Element {
           const result = await resp.json();
           estimatedValue = result.value;
         } else {
+          console.log("Frontend generated random value for node", node.station, node.line, "due to non-OK response");
           estimatedValue = getRandomInt(14, 28);
         }
       } catch (e) {
-        console.log("Response for node", node.station, node.line, ":", e);
+        //console.log("Response for node", node.station, node.line, ":", e);
+        console.log("Frontend generated random value for node", node.station, node.line, "due to non-OK response");
         estimatedValue = getRandomInt(14, 28);
       }
       results[`${node.station}_${node.line}`] = estimatedValue;
