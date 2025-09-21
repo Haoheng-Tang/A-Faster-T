@@ -12,6 +12,10 @@ interface Props {
   setAdapter: (a: string) => void
   adapterUrl?: string
   setAdapterUrl?: (u: string) => void
+  selectedDate: string
+  setSelectedDate: (d: string) => void
+  selectedHour: string
+  setSelectedHour: (h: string) => void
   onClose?: () => void
 }
 
@@ -27,11 +31,12 @@ export default function ControlPanel({
   setAdapter,
   adapterUrl,
   setAdapterUrl,
+  selectedDate,
+  setSelectedDate,
+  selectedHour,
+  setSelectedHour,
   onClose,
 }: Props): JSX.Element {
-  // Date and hour state
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [selectedHour, setSelectedHour] = useState<string>('12:00');
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState({ x: 16, y: 80 })
   const dragging = useRef(false)
@@ -129,7 +134,7 @@ export default function ControlPanel({
           onChange={(e) => {
             setAdapter(e.target.value)
             // attempt to load data immediately when adapter changes
-            estimateTraffic()
+            //estimateTraffic()
           }}
         >
           

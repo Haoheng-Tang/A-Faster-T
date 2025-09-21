@@ -30,13 +30,89 @@ export default function App(): JSX.Element {
   // selectedStopId is tracked in MapArea, so we need to lift it up
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
+  // New: support for line and multi-node selection
+  const [selectedLine, setSelectedLine] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+
+  // New: lift date and time state from ControlPanel
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedHour, setSelectedHour] = useState<string>('12:00');
+
+  // Store per-node estimated values
+  const [nodeEstimates, setNodeEstimates] = useState<Record<string, number>>({});
+
+  // Load node data from GeoJSON on mount
+  useEffect(() => {
+    fetch('/data/Metro Station - Geojson data/MBTA_NODE.geojson')
+      .then(res => res.json())
+      .then(geojson => {
+        // Convert geojson.features to your data format
+        const nodes = geojson.features.map((f: any) => ({
+          station: f.properties.STATION,
+          line: f.properties.LINE,
+          lat: f.geometry.coordinates[1],
+          lon: f.geometry.coordinates[0],
+        }));
+        setData(nodes);
+      });
+  }, []);
+
   const estimateTraffic = async () => {
-    const d = await fetchFromAdapter(adapter, { url: adapterUrl, live: liveMode })
-    setData(d)
-    // Only grow the node that is currently selected
-    if (selectedStopId) {
-      setGrownNodeId(selectedStopId);
-      setGrownNodeSize(getRandomInt(14, 28));
+    // Use selectedNodeIds if any, else fallback to selectedStopId
+    const nodeKeys = selectedNodeIds && selectedNodeIds.length > 0 ? selectedNodeIds : (selectedStopId ? [selectedStopId] : []);
+    console.log("nodeKeys:", nodeKeys);
+    if (nodeKeys.length === 0) return;
+
+    console.log(data)
+
+    // Parse keys into station/line
+    const nodeInfo = nodeKeys.map(key => {
+      const [station, line] = key.split('_');
+      // Try to find a node in data with matching station and line
+      return data.find(item => item.station === station && item.line === line);
+    });
+
+    // For each node, send a request and collect results
+    const results: Record<string, number> = {};
+    console.log("Node info for estimation:", nodeInfo);
+    await Promise.all(nodeInfo.map(async (node, idx) => {
+      if (!node) return;
+      const payload = {
+        date: selectedDate,
+        time: selectedHour,
+        station: node.station,
+        line: node.line,
+        lat: node.lat,
+        lon: node.lon,
+      };
+      console.log("Sending estimate request for node", node.station, node.line, "with payload:", payload);
+      let estimatedValue = null;
+      try {
+        const resp = await fetch('/api/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        console.log("Response for node", node.station, node.line, ":", resp);
+        if (resp.ok) {
+          const result = await resp.json();
+          estimatedValue = result.value;
+        } else {
+          estimatedValue = getRandomInt(14, 28);
+        }
+      } catch (e) {
+        console.log("Response for node", node.station, node.line, ":", e);
+        estimatedValue = getRandomInt(14, 28);
+      }
+      results[`${node.station}_${node.line}`] = estimatedValue;
+    }));
+    setNodeEstimates(results);
+    console.log('Estimate results:', results);
+
+    // For single node selection, keep old grown node logic for animation
+    if (nodeKeys.length === 1) {
+      setGrownNodeId(nodeKeys[0]);
+      setGrownNodeSize(results[nodeKeys[0]]);
     } else {
       setGrownNodeId(null);
       setGrownNodeSize(14);
@@ -107,6 +183,10 @@ export default function App(): JSX.Element {
             setAdapter={setAdapter}
             adapterUrl={adapterUrl}
             setAdapterUrl={setAdapterUrl}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            selectedHour={selectedHour}
+            setSelectedHour={setSelectedHour}
             onClose={() => setShowControls(false)}
           />
         )}
@@ -119,8 +199,13 @@ export default function App(): JSX.Element {
     adapter={adapter}
     selectedStopId={selectedStopId}
     setSelectedStopId={setSelectedStopId}
+    selectedLine={selectedLine}
+    setSelectedLine={setSelectedLine}
+    selectedNodeIds={selectedNodeIds}
+    setSelectedNodeIds={setSelectedNodeIds}
     grownNodeId={grownNodeId}
     grownNodeSize={grownNodeSize}
+    nodeEstimates={nodeEstimates}
   />
         {section === 0 && (
           <button className="scroll-down-btn" aria-label="Scroll down" onClick={scrollDown}>▾</button>

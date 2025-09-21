@@ -1,8 +1,18 @@
+# Add estimate endpoint for POST requests
+import random
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../dist', static_url_path='/')
 CORS(app)
+
+@app.route('/api/estimate', methods=['POST'])
+def estimate():
+    data = request.get_json()
+    print("Received estimate request:", data)  # <-- Add this line
+    # You can use data['nodeId'], data['lat'], data['lon'], data['date'], data['time'] if needed
+    value = random.randint(14, 28)
+    return jsonify({'value': value})
 
 @app.route('/api/ping')
 def ping():
